@@ -208,8 +208,120 @@
 	- Go to User Management under Settings. Here you can add/manage users and Update Credentials for all users
 
 
-<!-- Pending -->
 11. RPi Docker Monitor
+	- installastion/container deployement
+		- Ref link - https://github.com/pi-hosted/pi-hosted/blob/master/docs/rpi_docker_monitor.md#install-and-setup-instructions-for-the-rpi-docker-monitor
+	- open app templates under reqiured environment
+	- select RPi Docker Monitor
+	- Pre-Installation Steps
+		- open the cmdline file
+		```
+		sudo nano /boot/cmdline.txt
+		```
+		- Add the following line at the end of the file
+		```
+		systemd.unified_cgroup_hierarchy=0 cgroup_enable=memory cgroup_memory=1
+		```
+		- Save the file and reboot
+		```
+		sudo reboot
+		```
+		- Confirm that c-groups are enabled
+		```
+		cat /proc/cgroups
+		```
+		- You should see output something like this.
+		```
+		#subsys_name    hierarchy       num_cgroups     enabled
+		cpuset  9       15      1
+		cpu     7       69      1
+		cpuacct 7       69      1
+		blkio   8       69      1
+		memory  11      158     1
+		devices 3       69      1
+		freezer 5       16      1
+		net_cls 2       15      1
+		perf_event      6       15      1
+		net_prio        2       15      1
+		pids    4       76      1
+		rdma    10      1       1
+		```
+		- The numbers aren't really important what is important is that you see memory in the list if you don't confirm you have put it in the correct file. Don't go on until you get this working.
+		
+		- Folder Setup
+		- Ref Link : https://github.com/pi-hosted/pi-hosted/blob/master/docs/rpi_docker_monitor.md#folder-setup-script
+
+		- First thing we need to do is setup the folder structure and install some files that need to be in place for everything to work correctly.
+
+		- Run the following script
+		```
+		wget -qO- https://git.io/JPXba | sudo bash
+		```
+
+		- Deploy the Container from the App template
+		- Once the container is deployed, Open port 3000 of the server
+		- Login using the default credentials
+			| Username | Password |
+			|----------|----------|
+			| admin    | admin    |
+		- Update your password
+	- Setting up grafana
+		- once logged in, go to Data source under Connections
+		- Click on Add Data Source and then Select Prometheus
+		- Set the url to http://monitoring-prometheus:9090/
+		- Click on Save and Test
+	- Setup the dashboard
+		- Go to Dashboards and select import under New button
+		- Now we open the [Arm JSON](https://github.com/pi-hosted/pi-hosted/blob/master/configs/rpi_dashboard/arm_rpi_dashboard.json) or [PC(AMD)JSON](https://github.com/pi-hosted/pi-hosted/blob/master/configs/rpi_dashboard/amd_rpi_dashboard.json) file and Click on the "raw" button to copy the content from the json file.
+		- Click on load and select Prometheus as the Data source and click Import
+		- The Dashboard is ready, now you can share the link using the Share Option
+
 12. QBittorent
-13. Jellyfin
-14. Cloudflare
+	- Update package list
+	```
+	sudo apt update
+	```
+	- Install qbittorrent-nox, this is the command line version of qBittorrent with a built-in WebUI feature
+	```
+	sudo apt install qbittorrent-nox -y
+	```
+	- Add qbittorrent user to the system, because we will not run this service as a root
+	```bash
+	sudo useradd -r -m qbittorrent
+
+	# sudo usermod -a -G [groupname] [username]
+	sudo usermod -a -G qbittorrent pi
+	```
+	- Create a service file
+	```
+	sudo nano /etc/systemd/system/qbittorrent.service
+	```
+	- Enter the following data
+	```
+	[Unit]
+	Description=BitTorrent Client
+	After=network.target
+
+	[Service]
+	Type=forking
+	User=qbittorrent
+	Group=qbittorrent
+	UMask=002
+	ExecStart=/usr/bin/qbittorrent-nox -d --webui-port=8080
+	Restart=on-failure
+
+	[Install]
+	WantedBy=multi-user.target
+	```
+	- Enable the Service
+	```
+	sudo systemctl enable qbittorrent
+	```
+	- Start the Service
+	```
+	sudo systemctl start qbittorrent
+	```
+	- Open port 8080 to access QBittorrent and login using default credentials
+		| Username | Password |
+		|----------|----------|
+		| admin    | adminadmin    |
